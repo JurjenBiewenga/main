@@ -65,6 +65,16 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
+        public MemberTracker TryGetPackageAny(string name, string modName)
+        {
+            MemberTracker ret;
+            if (TryGetValue(name, modName, out ret))
+            {
+                return ret;
+            }
+            return null;
+        }
+
         public MemberTracker TryGetPackageLazy(string name) {
             lock (HierarchyLock) {
                 MemberTracker ret;
@@ -138,6 +148,18 @@ namespace Microsoft.Scripting.Actions {
             lock (HierarchyLock) {
                 for (int i = _lastDiscovery; i < _packageAssemblies.Count; i++) {
                     DiscoverAllTypes(_packageAssemblies[i]);
+                }
+                _lastDiscovery = _packageAssemblies.Count;
+            }
+        }
+
+        protected override void LoadNamespaces(string modName)
+        {
+            lock (HierarchyLock)
+            {
+                for (int i = _lastDiscovery; i < _packageAssemblies.Count; i++)
+                {
+                    DiscoverAllTypes(_packageAssemblies[i], modName);
                 }
                 _lastDiscovery = _packageAssemblies.Count;
             }

@@ -190,7 +190,7 @@ namespace IronPython.Runtime {
         ///     0 indicates only absolute imports should be performed
         ///     Positive numbers indicate the # of parent directories to search relative to the calling module
         /// </summary>        
-        public static object ImportModule(CodeContext/*!*/ context, object globals, string/*!*/ modName, bool bottom, int level) {
+        public static object ImportModule(CodeContext/*!*/ context, object globals, string/*!*/ modName, bool bottom, int level, string fullName = "") {
             if (modName.IndexOf(Path.DirectorySeparatorChar) != -1) {
                 throw PythonOps.ImportError("Import by filename is not supported.", modName);
             }
@@ -277,7 +277,7 @@ namespace IronPython.Runtime {
                             "Parent module '{0}' not found while handling absolute import",
                             package);
                     }
-                    newmod = ImportTopAbsolute(context, firstName);
+                    newmod = ImportTopAbsolute(context, firstName, (String.IsNullOrEmpty(fullName) ? modName : fullName));
                     finalName = firstName;
                     if (newmod == null) {
                         return null;
@@ -611,13 +611,13 @@ namespace IronPython.Runtime {
 
         #region Private Implementation Details
 
-        private static object ImportTopAbsolute(CodeContext/*!*/ context, string/*!*/ name) {
+        private static object ImportTopAbsolute(CodeContext/*!*/ context, string/*!*/ name, string modName) {
             object ret;
             if (TryGetExistingModule(context, name, out ret)) {
                 if (IsReflected(ret)) {
                     // Even though we found something in sys.modules, we need to check if a
                     // clr.AddReference has invalidated it. So try ImportReflected again.
-                    ret = ImportReflected(context, name) ?? ret;
+                    ret = ImportReflected(context, name, modName) ?? ret;
                 }
 
                 NamespaceTracker rp = ret as NamespaceTracker;
@@ -641,7 +641,7 @@ namespace IronPython.Runtime {
                 if (ret != null) return ret;
             }
 
-            ret = ImportReflected(context, name);
+            ret = ImportReflected(context, name, modName);
             if (ret != null) return ret;
 
             return null;
@@ -727,11 +727,11 @@ namespace IronPython.Runtime {
             return pc.GetBuiltinModule(name);
         }
 
-        private static object ImportReflected(CodeContext/*!*/ context, string/*!*/ name) {
+        private static object ImportReflected(CodeContext/*!*/ context, string/*!*/ name, string modName) {
             object ret;
             PythonContext pc = PythonContext.GetContext(context);
             if (!PythonOps.ScopeTryGetMember(context, pc.DomainManager.Globals, name, out ret) &&
-                (ret = pc.TopNamespace.TryGetPackageAny(name)) == null) {
+                (ret = pc.TopNamespace.TryGetPackageAny(name, modName)) == null) {
                 ret = TryImportSourceFile(pc, name);
             }
 

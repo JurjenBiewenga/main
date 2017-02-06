@@ -29,12 +29,14 @@ using System.Threading;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Actions
+{
 
     /// <summary>
     /// NamespaceTracker represent a CLS namespace.
     /// </summary>
-    public class NamespaceTracker : MemberTracker, IMembersList, IEnumerable<KeyValuePair<string, object>> {
+    public class NamespaceTracker : MemberTracker, IMembersList, IEnumerable<KeyValuePair<string, object>>
+    {
         // _dict contains all the currently loaded entries. However, there may be pending types that have
         // not yet been loaded in _typeNames
         internal Dictionary<string, MemberTracker> _dict = new Dictionary<string, MemberTracker>();
@@ -50,12 +52,14 @@ namespace Microsoft.Scripting.Actions {
 
         #region Protected API Surface
 
-        protected NamespaceTracker(string name) {
+        protected NamespaceTracker(string name)
+        {
             UpdateId();
             _fullName = name;
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             return base.ToString() + ":" + _fullName;
         }
 
@@ -63,20 +67,24 @@ namespace Microsoft.Scripting.Actions {
 
         #region Internal API Surface
 
-        internal NamespaceTracker GetOrMakeChildPackage(string childName, Assembly assem) {
+        internal NamespaceTracker GetOrMakeChildPackage(string childName, Assembly assem)
+        {
             // lock is held when this is called
             Assert.NotNull(childName, assem);
             Debug.Assert(childName.IndexOf('.') == -1); // This is the simple name, not the full name
             Debug.Assert(_packageAssemblies.Contains(assem)); // Parent namespace must contain all the assemblies of the child
 
             MemberTracker ret;
-            if (_dict.TryGetValue(childName, out ret)) {
+            if (_dict.TryGetValue(childName, out ret))
+            {
                 // If we have a module, then we add the assembly to the InnerModule
                 // If it's not a module, we'll wipe it out below, eg "def System(): pass" then 
                 // "import System" will result in the namespace being visible.
                 NamespaceTracker package = ret as NamespaceTracker;
-                if (package != null) {
-                    if (!package._packageAssemblies.Contains(assem)) {
+                if (package != null)
+                {
+                    if (!package._packageAssemblies.Contains(assem))
+                    {
                         package._packageAssemblies.Add(assem);
                         package.UpdateSubtreeIds();
                     }
@@ -87,7 +95,8 @@ namespace Microsoft.Scripting.Actions {
             return MakeChildPackage(childName, assem);
         }
 
-        private NamespaceTracker MakeChildPackage(string childName, Assembly assem) {
+        private NamespaceTracker MakeChildPackage(string childName, Assembly assem)
+        {
             // lock is held when this is called
             Assert.NotNull(childName, assem);
             NamespaceTracker rp = new NamespaceTracker(GetFullChildName(childName));
@@ -98,17 +107,20 @@ namespace Microsoft.Scripting.Actions {
             return rp;
         }
 
-        private string GetFullChildName(string childName) {
+        private string GetFullChildName(string childName)
+        {
             Assert.NotNull(childName);
             Debug.Assert(childName.IndexOf('.') == -1); // This is the simple name, not the full name
-            if (_fullName == null) {
+            if (_fullName == null)
+            {
                 return childName;
             }
 
             return _fullName + "." + childName;
         }
 
-        private static Type LoadType(Assembly assem, string fullTypeName) {
+        private static Type LoadType(Assembly assem, string fullTypeName)
+        {
             Assert.NotNull(assem, fullTypeName);
             Type type = assem.GetType(fullTypeName);
             // We should ignore nested types. They will be loaded when the containing type is loaded
@@ -116,29 +128,36 @@ namespace Microsoft.Scripting.Actions {
             return type;
         }
 
-        internal void AddTypeName(string typeName, Assembly assem) {
+        internal void AddTypeName(string typeName, Assembly assem)
+        {
             // lock is held when this is called
             Assert.NotNull(typeName, assem);
             Debug.Assert(typeName.IndexOf('.') == -1); // This is the simple name, not the full name
 
-            if (!_typeNames.ContainsKey(assem)) {
+            if (!_typeNames.ContainsKey(assem))
+            {
                 _typeNames[assem] = new TypeNames(assem, _fullName);
             }
             _typeNames[assem].AddTypeName(typeName);
 
             string normalizedTypeName = ReflectionUtils.GetNormalizedTypeName(typeName);
-            if (_dict.ContainsKey(normalizedTypeName)) {
+            if (_dict.ContainsKey(normalizedTypeName))
+            {
                 // A similarly named type, namespace, or module already exists.
                 Type newType = LoadType(assem, GetFullChildName(typeName));
 
-                if (newType != null) {
+                if (newType != null)
+                {
                     object existingValue = _dict[normalizedTypeName];
                     TypeTracker existingTypeEntity = existingValue as TypeTracker;
-                    if (existingTypeEntity == null) {
+                    if (existingTypeEntity == null)
+                    {
                         // Replace the existing namespace or module with the new type
                         Debug.Assert(existingValue is NamespaceTracker);
                         _dict[normalizedTypeName] = MemberTracker.FromMemberInfo(newType.GetTypeInfo());
-                    } else {
+                    }
+                    else
+                    {
                         // Unify the new type with the existing type
                         _dict[normalizedTypeName] = TypeGroup.UpdateTypeEntity(existingTypeEntity, ReflectionCache.GetTypeTracker(newType));
                     }
@@ -149,11 +168,15 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Loads all the types from all assemblies that contribute to the current namespace (but not child namespaces)
         /// </summary>
-        private void LoadAllTypes() {
-            foreach (TypeNames typeNameList in _typeNames.Values) {
-                foreach (string typeName in typeNameList.GetNormalizedTypeNames()) {
+        private void LoadAllTypes()
+        {
+            foreach (TypeNames typeNameList in _typeNames.Values)
+            {
+                foreach (string typeName in typeNameList.GetNormalizedTypeNames())
+                {
                     object value;
-                    if (!TryGetValue(typeName, out value)) {
+                    if (!TryGetValue(typeName, out value))
+                    {
                         Debug.Assert(false, "We should never get here as TryGetMember should raise a TypeLoadException");
                         throw new TypeLoadException(typeName);
                     }
@@ -163,27 +186,34 @@ namespace Microsoft.Scripting.Actions {
 
         #endregion
 
-        public override string Name {
-            get {
+        public override string Name
+        {
+            get
+            {
                 return _fullName;
             }
         }
 
-        protected void DiscoverAllTypes(Assembly assem) {
+        protected void DiscoverAllTypes(Assembly assem)
+        {
             // lock is held when this is called
             Assert.NotNull(assem);
 
             NamespaceTracker previousPackage = null;
             string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
 
-            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.Configuration.PrivateBinding)) {
+            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.Configuration.PrivateBinding))
+            {
                 NamespaceTracker package;
                 Debug.Assert(typeName.Namespace != String.Empty);
-                if (typeName.Namespace == previousFullNamespace) {
+                if (typeName.Namespace == previousFullNamespace)
+                {
                     // We have a cache hit. We dont need to call GetOrMakePackageHierarchy (which generates
                     // a fair amount of temporary substrings)
                     package = previousPackage;
-                } else {
+                }
+                else
+                {
                     package = GetOrMakePackageHierarchy(assem, typeName.Namespace);
                     previousFullNamespace = typeName.Namespace;
                     previousPackage = package;
@@ -193,24 +223,59 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        protected void DiscoverAllTypes(Assembly assem, string modName)
+        {
+            // lock is held when this is called
+            Assert.NotNull(assem);
+
+            NamespaceTracker previousPackage = null;
+            string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
+
+            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.Configuration.PrivateBinding))
+            {
+                NamespaceTracker package;
+                Debug.Assert(typeName.Namespace != String.Empty);
+                if (typeName.Namespace.StartsWith(modName))
+                {
+                    if (typeName.Namespace == previousFullNamespace)
+                    {
+                        // We have a cache hit. We dont need to call GetOrMakePackageHierarchy (which generates
+                        // a fair amount of temporary substrings)
+                        package = previousPackage;
+                    }
+                    else
+                    {
+                        package = GetOrMakePackageHierarchy(assem, typeName.Namespace);
+                        previousFullNamespace = typeName.Namespace;
+                        previousPackage = package;
+                    }
+
+                    package.AddTypeName(typeName.Name, assem);
+                }
+            }
+        }
+
         /// <summary>
         /// Populates the tree with nodes for each part of the namespace
         /// </summary>
         /// <param name="assem"></param>
         /// <param name="fullNamespace">Full namespace name. It can be null (for top-level types)</param>
         /// <returns></returns>
-        private NamespaceTracker GetOrMakePackageHierarchy(Assembly assem, string fullNamespace) {
+        private NamespaceTracker GetOrMakePackageHierarchy(Assembly assem, string fullNamespace)
+        {
             // lock is held when this is called
             Assert.NotNull(assem);
 
-            if (fullNamespace == null) {
+            if (fullNamespace == null)
+            {
                 // null is the top-level namespace
                 return this;
             }
 
             NamespaceTracker ret = this;
             string[] pieces = fullNamespace.Split('.');
-            for (int i = 0; i < pieces.Length; i++) {
+            for (int i = 0; i < pieces.Length; i++)
+            {
                 ret = ret.GetOrMakeChildPackage(pieces[i], assem);
             }
 
@@ -224,18 +289,22 @@ namespace Microsoft.Scripting.Actions {
         /// 2. Previous calls to GetCustomMemberNames (eg. "from foo import *" in Python) would not have included this type.
         /// 3. This does not deal with new namespaces added to the assembly
         /// </summary>
-        private MemberTracker CheckForUnlistedType(string nameString) {
+        private MemberTracker CheckForUnlistedType(string nameString)
+        {
             Assert.NotNull(nameString);
 
             string fullTypeName = GetFullChildName(nameString);
-            foreach (Assembly assem in _packageAssemblies) {
+            foreach (Assembly assem in _packageAssemblies)
+            {
                 Type type = assem.GetType(fullTypeName);
-                if (type == null || type.IsNested()) {
+                if (type == null || type.IsNested())
+                {
                     continue;
                 }
 
                 bool publishType = type.IsPublic() || _topPackage.DomainManager.Configuration.PrivateBinding;
-                if (!publishType) {
+                if (!publishType)
+                {
                     continue;
                 }
 
@@ -248,43 +317,52 @@ namespace Microsoft.Scripting.Actions {
 
         #region IAttributesCollection Members
 
-        public bool TryGetValue(string name, out object value) {
+        public bool TryGetValue(string name, out object value)
+        {
             MemberTracker tmp;
             bool res = TryGetValue(name, out tmp);
             value = tmp;
             return res;
         }
 
-        public bool TryGetValue(string name, out MemberTracker value) {
-            lock (_topPackage.HierarchyLock) {
+        public bool TryGetValue(string name, out MemberTracker value)
+        {
+            lock (_topPackage.HierarchyLock)
+            {
                 LoadNamespaces();
 
-                if (_dict.TryGetValue(name, out value)) {
+                if (_dict.TryGetValue(name, out value))
+                {
                     return true;
                 }
 
                 MemberTracker existingTypeEntity = null;
 
-                if (name.IndexOf('.') != -1) {
+                if (name.IndexOf('.') != -1)
+                {
                     value = null;
                     return false;
                 }
 
                 // Look up the type names and load the type if its name exists
 
-                foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
-                    if (!kvp.Value.Contains(name)) {
+                foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames)
+                {
+                    if (!kvp.Value.Contains(name))
+                    {
                         continue;
                     }
 
                     existingTypeEntity = kvp.Value.UpdateTypeEntity((TypeTracker)existingTypeEntity, name);
                 }
 
-                if (existingTypeEntity == null) {
+                if (existingTypeEntity == null)
+                {
                     existingTypeEntity = CheckForUnlistedType(name);
                 }
 
-                if (existingTypeEntity != null) {
+                if (existingTypeEntity != null)
+                {
                     _dict[name] = existingTypeEntity;
                     value = existingTypeEntity;
                     return true;
@@ -294,50 +372,110 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public bool ContainsKey(string name) {
+        public bool TryGetValue(string name, string modName, out MemberTracker value)
+        {
+            lock (_topPackage.HierarchyLock)
+            {
+                LoadNamespaces();
+
+                if (_dict.TryGetValue(name, out value))
+                {
+                    return true;
+                }
+
+                MemberTracker existingTypeEntity = null;
+
+                if (name.IndexOf('.') != -1)
+                {
+                    value = null;
+                    return false;
+                }
+
+                // Look up the type names and load the type if its name exists
+
+                foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames)
+                {
+                    if (!kvp.Value.Contains(name))
+                    {
+                        continue;
+                    }
+
+                    existingTypeEntity = kvp.Value.UpdateTypeEntity((TypeTracker)existingTypeEntity, name);
+                }
+
+                if (existingTypeEntity == null)
+                {
+                    existingTypeEntity = CheckForUnlistedType(name);
+                }
+
+                if (existingTypeEntity != null)
+                {
+                    _dict[name] = existingTypeEntity;
+                    value = existingTypeEntity;
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        public bool ContainsKey(string name)
+        {
             object dummy;
             return TryGetValue(name, out dummy);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
-        public object this[string name] {
-            get {
+        public object this[string name]
+        {
+            get
+            {
                 object res;
-                if (TryGetValue(name, out res)) {
+                if (TryGetValue(name, out res))
+                {
                     return res;
                 }
                 throw new KeyNotFoundException();
             }
         }
 
-        public int Count {
+        public int Count
+        {
             get { return _dict.Count; }
         }
 
-        public ICollection<string> Keys {
-            get {
+        public ICollection<string> Keys
+        {
+            get
+            {
                 LoadNamespaces();
 
-                lock (_topPackage.HierarchyLock) {
+                lock (_topPackage.HierarchyLock)
+                {
                     var res = new List<string>();
                     return (ICollection<string>)AddKeys(res);
                 }
             }
         }
 
-        private IList AddKeys(IList res) {
-            foreach (string s in _dict.Keys) {
+        private IList AddKeys(IList res)
+        {
+            foreach (string s in _dict.Keys)
+            {
                 res.Add(s);
             }
 
-            foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
-                foreach (string typeName in kvp.Value.GetNormalizedTypeNames()) {
-                    if (!res.Contains(typeName)) {
+            foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames)
+            {
+                foreach (string typeName in kvp.Value.GetNormalizedTypeNames())
+                {
+                    if (!res.Contains(typeName))
+                    {
                         res.Add(typeName);
                     }
                 }
             }
-            
+
             return res;
         }
 
@@ -345,35 +483,52 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEnumerable<KeyValuePair<string, object>> Members
 
-        public IEnumerator<KeyValuePair<string, object>> GetEnumerator() {
-            foreach (var key in Keys) {
+        public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+        {
+            foreach (var key in Keys)
+            {
                 yield return new KeyValuePair<string, object>(key, this[key]);
             }
         }
 
         #endregion
 
-        IEnumerator IEnumerable.GetEnumerator() {
-            foreach (var key in Keys) {
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            foreach (var key in Keys)
+            {
                 yield return new KeyValuePair<string, object>(key, this[key]);
             }
         }
 
-        public IList<Assembly> PackageAssemblies {
-            get {
+        public IList<Assembly> PackageAssemblies
+        {
+            get
+            {
                 LoadNamespaces();
 
                 return _packageAssemblies;
             }
         }
 
-        protected virtual void LoadNamespaces() {
-            if (_topPackage != null) {
+        protected virtual void LoadNamespaces()
+        {
+            if (_topPackage != null)
+            {
                 _topPackage.LoadNamespaces();
             }
         }
 
-        protected void SetTopPackage(TopNamespaceTracker pkg) {
+        protected virtual void LoadNamespaces(string modName)
+        {
+            if (_topPackage != null)
+            {
+                _topPackage.LoadNamespaces(modName);
+            }
+        }
+
+        protected void SetTopPackage(TopNamespaceTracker pkg)
+        {
             Assert.NotNull(pkg);
             _topPackage = pkg;
         }
@@ -384,43 +539,52 @@ namespace Microsoft.Scripting.Actions {
         /// types slows down startup, increases working set, and is semantically incorrect as it can trigger
         /// TypeLoadExceptions sooner than required.
         /// </summary>
-        internal class TypeNames {
+        internal class TypeNames
+        {
             List<string> _simpleTypeNames = new List<string>();
             Dictionary<string, List<string>> _genericTypeNames = new Dictionary<string, List<string>>();
 
             Assembly _assembly;
             string _fullNamespace;
 
-            internal TypeNames(Assembly assembly, string fullNamespace) {
+            internal TypeNames(Assembly assembly, string fullNamespace)
+            {
                 _assembly = assembly;
                 _fullNamespace = fullNamespace;
             }
 
-            internal bool Contains(string normalizedTypeName) {
+            internal bool Contains(string normalizedTypeName)
+            {
                 Debug.Assert(normalizedTypeName.IndexOf('.') == -1); // This is the simple name, not the full name
                 Debug.Assert(ReflectionUtils.GetNormalizedTypeName(normalizedTypeName) == normalizedTypeName);
 
                 return _simpleTypeNames.Contains(normalizedTypeName) || _genericTypeNames.ContainsKey(normalizedTypeName);
             }
 
-            internal MemberTracker UpdateTypeEntity(TypeTracker existingTypeEntity, string normalizedTypeName) {
+            internal MemberTracker UpdateTypeEntity(TypeTracker existingTypeEntity, string normalizedTypeName)
+            {
                 Debug.Assert(normalizedTypeName.IndexOf('.') == -1); // This is the simple name, not the full name
                 Debug.Assert(ReflectionUtils.GetNormalizedTypeName(normalizedTypeName) == normalizedTypeName);
 
                 // Look for a non-generic type
-                if (_simpleTypeNames.Contains(normalizedTypeName)) {
+                if (_simpleTypeNames.Contains(normalizedTypeName))
+                {
                     Type newType = LoadType(_assembly, GetFullChildName(normalizedTypeName));
-                    if (newType != null) {
+                    if (newType != null)
+                    {
                         existingTypeEntity = TypeGroup.UpdateTypeEntity(existingTypeEntity, ReflectionCache.GetTypeTracker(newType));
                     }
                 }
 
                 // Look for generic types
-                if (_genericTypeNames.ContainsKey(normalizedTypeName)) {
+                if (_genericTypeNames.ContainsKey(normalizedTypeName))
+                {
                     List<string> actualNames = _genericTypeNames[normalizedTypeName];
-                    foreach (string actualName in actualNames) {
+                    foreach (string actualName in actualNames)
+                    {
                         Type newType = LoadType(_assembly, GetFullChildName(actualName));
-                        if (newType != null) {
+                        if (newType != null)
+                        {
                             existingTypeEntity = TypeGroup.UpdateTypeEntity(existingTypeEntity, ReflectionCache.GetTypeTracker(newType));
                         }
                     }
@@ -429,17 +593,24 @@ namespace Microsoft.Scripting.Actions {
                 return existingTypeEntity;
             }
 
-            internal void AddTypeName(string typeName) {
+            internal void AddTypeName(string typeName)
+            {
                 Debug.Assert(typeName.IndexOf('.') == -1); // This is the simple name, not the full name
 
                 string normalizedName = ReflectionUtils.GetNormalizedTypeName(typeName);
-                if (normalizedName == typeName) {
+                if (normalizedName == typeName)
+                {
                     _simpleTypeNames.Add(typeName);
-                } else {
+                }
+                else
+                {
                     List<string> actualNames;
-                    if (_genericTypeNames.ContainsKey(normalizedName)) {
+                    if (_genericTypeNames.ContainsKey(normalizedName))
+                    {
                         actualNames = _genericTypeNames[normalizedName];
-                    } else {
+                    }
+                    else
+                    {
                         actualNames = new List<string>();
                         _genericTypeNames[normalizedName] = actualNames;
                     }
@@ -447,16 +618,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
-            string GetFullChildName(string childName) {
+            string GetFullChildName(string childName)
+            {
                 Debug.Assert(childName.IndexOf('.') == -1); // This is the simple name, not the full name
-                if (_fullNamespace == null) {
+                if (_fullNamespace == null)
+                {
                     return childName;
                 }
 
                 return _fullNamespace + "." + childName;
             }
 
-            internal ICollection<string> GetNormalizedTypeNames() {
+            internal ICollection<string> GetNormalizedTypeNames()
+            {
                 List<string> normalizedTypeNames = new List<string>();
 
                 normalizedTypeNames.AddRange(_simpleTypeNames);
@@ -466,47 +640,57 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public int Id {
-            get {
+        public int Id
+        {
+            get
+            {
                 return _id;
             }
         }
 
         #region IMembersList Members
 
-        public IList<string> GetMemberNames() {
+        public IList<string> GetMemberNames()
+        {
             LoadNamespaces();
 
-            lock (_topPackage.HierarchyLock) {
+            lock (_topPackage.HierarchyLock)
+            {
 
                 List<string> res = new List<string>();
                 AddKeys(res);
                 res.Sort();
-               return res;
+                return res;
             }
         }
 
         #endregion
 
-        public override TrackerTypes MemberType {
+        public override TrackerTypes MemberType
+        {
             get { return TrackerTypes.Namespace; }
         }
 
-        public override Type DeclaringType {
+        public override Type DeclaringType
+        {
             get { return null; }
         }
 
-        private void UpdateId() {
+        private void UpdateId()
+        {
             _id = Interlocked.Increment(ref _masterId);
         }
 
-        protected void UpdateSubtreeIds() {
+        protected void UpdateSubtreeIds()
+        {
             // lock is held when this is called
             UpdateId();
 
-            foreach (KeyValuePair<string, MemberTracker> kvp in _dict) {
+            foreach (KeyValuePair<string, MemberTracker> kvp in _dict)
+            {
                 NamespaceTracker ns = kvp.Value as NamespaceTracker;
-                if (ns != null) {
+                if (ns != null)
+                {
                     ns.UpdateSubtreeIds();
                 }
             }
