@@ -223,37 +223,42 @@ namespace Microsoft.Scripting.Actions
             }
         }
 
-        protected void DiscoverAllTypes(Assembly assem, string modName)
+        protected void DiscoverAllTypes(Assembly assem, List<string> modNames)
         {
             // lock is held when this is called
             Assert.NotNull(assem);
+            Assert.NotNull(modNames);
 
             NamespaceTracker previousPackage = null;
             string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
 
             foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.Configuration.PrivateBinding))
             {
-                NamespaceTracker package;
-                Debug.Assert(typeName.Namespace != String.Empty);
-                if (typeName.Namespace.StartsWith(modName))
+                foreach (var modName in modNames)
                 {
-                    if (typeName.Namespace == previousFullNamespace)
+                    NamespaceTracker package;
+                    Debug.Assert(typeName.Namespace != String.Empty);
+                    if ((typeName.Namespace + "." + typeName.Name).StartsWith(modName))
                     {
-                        // We have a cache hit. We dont need to call GetOrMakePackageHierarchy (which generates
-                        // a fair amount of temporary substrings)
-                        package = previousPackage;
-                    }
-                    else
-                    {
-                        package = GetOrMakePackageHierarchy(assem, typeName.Namespace);
-                        previousFullNamespace = typeName.Namespace;
-                        previousPackage = package;
-                    }
+                        if (typeName.Namespace == previousFullNamespace)
+                        {
+                            // We have a cache hit. We dont need to call GetOrMakePackageHierarchy (which generates
+                            // a fair amount of temporary substrings)
+                            package = previousPackage;
+                        }
+                        else
+                        {
+                            package = GetOrMakePackageHierarchy(assem, typeName.Namespace);
+                            previousFullNamespace = typeName.Namespace;
+                            previousPackage = package;
+                        }
 
-                    package.AddTypeName(typeName.Name, assem);
+                        package.AddTypeName(typeName.Name, assem);
+                    }
                 }
             }
         }
+
 
         /// <summary>
         /// Populates the tree with nodes for each part of the namespace
@@ -324,12 +329,19 @@ namespace Microsoft.Scripting.Actions
             value = tmp;
             return res;
         }
+        public bool TryGetValue(string name, List<string> modNames, out object value)
+        {
+            MemberTracker tmp;
+            bool res = TryGetValue(name, modNames, out tmp);
+            value = tmp;
+            return res;
+        }
 
-        public bool TryGetValue(string name, out MemberTracker value)
+        public bool TryGetValue(string name, List<string> modNames, out MemberTracker value)
         {
             lock (_topPackage.HierarchyLock)
             {
-                LoadNamespaces();
+                LoadNamespaces(modNames);
 
                 if (_dict.TryGetValue(name, out value))
                 {
@@ -372,7 +384,7 @@ namespace Microsoft.Scripting.Actions
             }
         }
 
-        public bool TryGetValue(string name, string modName, out MemberTracker value)
+        public bool TryGetValue(string name, out MemberTracker value)
         {
             lock (_topPackage.HierarchyLock)
             {
@@ -519,11 +531,11 @@ namespace Microsoft.Scripting.Actions
             }
         }
 
-        protected virtual void LoadNamespaces(string modName)
+        protected virtual void LoadNamespaces(List<string> modNames)
         {
             if (_topPackage != null)
             {
-                _topPackage.LoadNamespaces(modName);
+                _topPackage.LoadNamespaces(modNames);
             }
         }
 

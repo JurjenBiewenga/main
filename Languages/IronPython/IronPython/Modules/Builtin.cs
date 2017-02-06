@@ -122,15 +122,15 @@ namespace IronPython.Modules
             IList from = fromlist as IList;
             PythonContext pc = PythonContext.GetContext(context);
 
-            string fullName = name;
+            List<string> fullNames = new List<string>(from.Count);
             if (from != null)
                 foreach (var item in from)
                 {
-                    if (item.ToString() != ".*")
-                        fullName += "." + item;
+                    if (item.ToString() != "*")
+                        fullNames.Add(name + "." + item);
                 }
 
-            object ret = Importer.ImportModule(context, globals, name, from != null && from.Count > 0, level, fullName);
+            object ret = Importer.ImportModule(context, globals, name, from != null && from.Count > 0, level, fullNames);
             if (ret == null)
             {
                 return LightExceptions.Throw(PythonOps.ImportError("No module named {0}", name));

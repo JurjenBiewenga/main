@@ -57,18 +57,18 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        public MemberTracker TryGetPackageAny(string name) {
+        public MemberTracker TryGetPackageAny(string name, List<string> modNames) {
             MemberTracker ret;
-            if (TryGetValue(name, out ret)) {
+            if (TryGetValue(name, modNames, out ret)) {
                 return ret;
             }
             return null;
         }
 
-        public MemberTracker TryGetPackageAny(string name, string modName)
+        public MemberTracker TryGetPackageAny(string name)
         {
             MemberTracker ret;
-            if (TryGetValue(name, modName, out ret))
+            if (TryGetValue(name, out ret))
             {
                 return ret;
             }
@@ -153,13 +153,13 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected override void LoadNamespaces(string modName)
+        protected override void LoadNamespaces(List<string> modNames)
         {
             lock (HierarchyLock)
             {
                 for (int i = _lastDiscovery; i < _packageAssemblies.Count; i++)
                 {
-                    DiscoverAllTypes(_packageAssemblies[i], modName);
+                    DiscoverAllTypes(_packageAssemblies[i], modNames);
                 }
                 _lastDiscovery = _packageAssemblies.Count;
             }
