@@ -104,74 +104,106 @@ namespace IronPython.Runtime
         /// the module.  The outer modules dictionary is then updated with the
         /// result.
         /// </summary>
-        public static object ImportFrom(CodeContext/*!*/ context, object from, string name) {
-                PythonModule scope = from as PythonModule;
-                PythonType pt;
-                NamespaceTracker nt;
-                if (scope != null) {
-                    object ret;
-                    if (scope.GetType() == typeof(PythonModule)) {
-                        if (scope.__dict__.TryGetValue(name, out ret)) {
-                            return ret;
-                        }
-                    } else {
-                        // subclass of module, it could have overridden __getattr__ or __getattribute__
-                        if (PythonOps.TryGetBoundAttr(context, scope, name, out ret)) {
-                            return ret;
-                        }
-                    }
-
-                    object path;
-                    List listPath;
-                    string stringPath;
-                	if (scope.__dict__._storage.TryGetPath(out path)) {
-                    	if ((listPath = path as List) != null) {
-                      		return ImportNestedModule(context, scope, new[] { name }, 0, listPath);
-                    	} else if((stringPath = path as string) != null) {
-                        	return ImportNestedModule(context, scope, new[] { name }, 0, List.FromArrayNoCopy(stringPath));
-                    	}
-                	}
-                } else if ((pt = from as PythonType) != null) {
-                    PythonTypeSlot pts;
-                    object res;
-                    if (pt.TryResolveSlot(context, name, out pts) &&
-                        pts.TryGetValue(context, null, pt, out res)) {
-                        return res;
-                    }
-                } else if ((nt = from as NamespaceTracker) != null) {
-                    object res = NamespaceTrackerOps.GetCustomMember(context, nt, name);
-                    if (res != OperationFailed.Value) {
-                        return res;
-                    }
-                } else {
-                    // This is too lax, for example it allows from module.class import member
-                    object ret;
-                    if (PythonOps.TryGetBoundAttr(context, from, name, out ret)) {
+        public static object ImportFrom(CodeContext/*!*/ context, object from, string name)
+        {
+            PythonModule scope = from as PythonModule;
+            PythonType pt;
+            NamespaceTracker nt;
+            if (scope != null)
+            {
+                object ret;
+                if (scope.GetType() == typeof(PythonModule))
+                {
+                    if (scope.__dict__.TryGetValue(name, out ret))
+                    {
                         return ret;
                     }
                 }
-            
-            throw PythonOps.ImportError("Cannot import name {0}", name);
-        }
+                else
+                {
+                    // subclass of module, it could have overridden __getattr__ or __getattribute__
+                    if (PythonOps.TryGetBoundAttr(context, scope, name, out ret))
+                    {
+                        return ret;
+                    }
+                }
 
-        private static object ImportModuleFrom(CodeContext/*!*/ context, object from, string[] parts, int current) {
-            PythonModule scope = from as PythonModule;
-            if (scope != null) {
                 object path;
                 List listPath;
                 string stringPath;
-                if (scope.__dict__._storage.TryGetPath(out path)) {
-                    if ((listPath = path as List) != null) {
+                if (scope.__dict__._storage.TryGetPath(out path))
+                {
+                    if ((listPath = path as List) != null)
+                    {
+                        return ImportNestedModule(context, scope, new[] { name }, 0, listPath);
+                    }
+                    else if ((stringPath = path as string) != null)
+                    {
+                        return ImportNestedModule(context, scope, new[] { name }, 0, List.FromArrayNoCopy(stringPath));
+                    }
+                }
+            }
+            else if ((pt = from as PythonType) != null)
+            {
+                PythonTypeSlot pts;
+                object res;
+                if (pt.TryResolveSlot(context, name, out pts) &&
+                    pts.TryGetValue(context, null, pt, out res))
+                {
+                    return res;
+                }
+            }
+            else if ((nt = from as NamespaceTracker) != null)
+            {
+                object res = NamespaceTrackerOps.GetCustomMember(context, nt, name);
+                if (res != OperationFailed.Value)
+                {
+                    return res;
+                }
+            }
+            else
+            {
+                // This is too lax, for example it allows from module.class import member
+                object ret;
+                if (PythonOps.TryGetBoundAttr(context, from, name, out ret))
+                {
+                    return ret;
+                }
+            }
+
+            throw PythonOps.ImportError("Cannot import name {0}", name);
+        }
+
+        private static object ImportModuleFrom(CodeContext/*!*/ context, object from, string[] parts, int current)
+        {
+            PythonModule scope = from as PythonModule;
+            if (scope != null)
+            {
+                object path;
+                List listPath;
+                string stringPath;
+                if (scope.__dict__._storage.TryGetPath(out path))
+                {
+                    if ((listPath = path as List) != null)
+                    {
                         return ImportNestedModule(context, scope, parts, current, listPath);
-                    } else if((stringPath = path as string) != null) {
+                    }
+                    else if ((stringPath = path as string) != null)
+                    {
                         return ImportNestedModule(context, scope, parts, current, List.FromArrayNoCopy(stringPath));
                     }
-                } else {
+                }
+                else
+                {
                     PythonType t = DynamicHelpers.GetPythonType(scope);
-                    if (t.TryGetMember(context, scope, "__path__", out path)) {
-                        if((listPath = path as List) != null) {
+                    if (t.TryGetMember(context, scope, "__path__", out path))
+                    {
+                        if ((listPath = path as List) != null)
+                        {
                             return ImportNestedModule(context, scope, parts, current, listPath);
-                        } else if((stringPath = path as string) != null) {
+                        }
+                        else if ((stringPath = path as string) != null)
+                        {
                             return ImportNestedModule(context, scope, parts, current, List.FromArrayNoCopy(stringPath));
                         }
                     }
@@ -179,9 +211,11 @@ namespace IronPython.Runtime
             }
 
             NamespaceTracker ns = from as NamespaceTracker;
-            if (ns != null) {
+            if (ns != null)
+            {
                 object val;
-                if (ns.TryGetValue(parts[current], out val)) {
+                if (ns.TryGetValue(parts[current], out val))
+                {
                     return MemberTrackerToPython(context, val);
                 }
             }
@@ -1070,6 +1104,7 @@ namespace IronPython.Runtime
                 return null;
             }
 
+            //TODO: Fix permissions for python imports in certain folders
             foreach (object dirname in (IEnumerable)path)
             {
                 string str = dirname as string;

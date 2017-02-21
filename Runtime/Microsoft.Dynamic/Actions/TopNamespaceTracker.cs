@@ -157,7 +157,7 @@ namespace Microsoft.Scripting.Actions {
         {
             lock (HierarchyLock)
             {
-                for (int i = _lastDiscovery; i < _packageAssemblies.Count; i++)
+                for (int i = 0; i < _packageAssemblies.Count; i++)
                 {
                     DiscoverAllTypes(_packageAssemblies[i], modNames);
                 }

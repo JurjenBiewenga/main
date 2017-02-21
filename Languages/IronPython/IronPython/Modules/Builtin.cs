@@ -110,6 +110,51 @@ namespace IronPython.Modules
             return __import__(context, name, null, null, null, -1);
         }
 
+        [Documentation("ImportWithPermissions(name, globals, locals, fromlist, level) -> module\n\nImport a module.")]
+        [LightThrowing]
+        public static object ImportWithPermissions(CodeContext/*!*/ context, string name, [DefaultParameterValue(null)]object globals, [DefaultParameterValue(null)]object locals, [DefaultParameterValue(null)]object fromlist, [DefaultParameterValue(-1)]int level, List<string> fullNames)
+        {
+            if (fromlist is string || fromlist is Extensible<string>)
+            {
+                fromlist = new List<object> { fromlist };
+            }
+
+            IList from = fromlist as IList;
+            PythonContext pc = PythonContext.GetContext(context);
+
+            object ret = Importer.ImportModule(context, globals, name, from != null && from.Count > 0, level, fullNames);
+            if (ret == null)
+            {
+                return LightExceptions.Throw(PythonOps.ImportError("No module named {0}", name));
+            }
+
+            PythonModule mod = ret as PythonModule;
+            if (mod != null && from != null)
+            {
+                string strAttrName;
+                for (int i = 0; i < from.Count; i++)
+                {
+                    object attrName = from[i];
+
+                    if (pc.TryConvertToString(attrName, out strAttrName) &&
+                        !String.IsNullOrEmpty(strAttrName) &&
+                        strAttrName != "*")
+                    {
+                        try
+                        {
+                            Importer.ImportFrom(context, mod, strAttrName);
+                        }
+                        catch (ImportException)
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            return ret;
+        }
+
         [Documentation("__import__(name, globals, locals, fromlist, level) -> module\n\nImport a module.")]
         [LightThrowing]
         public static object __import__(CodeContext/*!*/ context, string name, [DefaultParameterValue(null)]object globals, [DefaultParameterValue(null)]object locals, [DefaultParameterValue(null)]object fromlist, [DefaultParameterValue(-1)]int level)
@@ -122,13 +167,16 @@ namespace IronPython.Modules
             IList from = fromlist as IList;
             PythonContext pc = PythonContext.GetContext(context);
 
-            List<string> fullNames = new List<string>(from.Count);
-            if (from != null)
+            List<string> fullNames = new List<string>();
+            if (from != null && from.Count > 0)
                 foreach (var item in from)
                 {
                     if (item.ToString() != "*")
                         fullNames.Add(name + "." + item);
                 }
+
+            if (from == null || fullNames.Count == 0)
+                fullNames.Add(name);
 
             object ret = Importer.ImportModule(context, globals, name, from != null && from.Count > 0, level, fullNames);
             if (ret == null)

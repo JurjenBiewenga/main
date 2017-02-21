@@ -238,7 +238,8 @@ namespace Microsoft.Scripting.Actions
                 {
                     NamespaceTracker package;
                     Debug.Assert(typeName.Namespace != String.Empty);
-                    if ((typeName.Namespace + "." + typeName.Name).StartsWith(modName))
+                    string fullName = (typeName.Namespace + "." + typeName.Name);
+                    if (fullName.StartsWith(modName + ".")  || fullName.StartsWith(modName + "`") || fullName == modName)
                     {
                         if (typeName.Namespace == previousFullNamespace)
                         {
