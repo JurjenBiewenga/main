@@ -19,6 +19,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DefineConstants>NET_40;$(DefineConstants);$(SQLiteCommon);$(SQLiteCommonOmit);SQLITE_MUTEX_W32;SQLITE_THREADSAFE;SQLITE_ENABLE_OVERSIZE_CELL_CHECK</DefineConstants>
+    <DocumentationFile>C:\Git\Domo\IronPython\Solutions\..\bin\Debug\IronPython.SQLite.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DefineConstants>NET_40;$(DefineConstants);$(SQLiteCommon);$(SQLiteCommonOmit);SQLITE_MUTEX_W32;SQLITE_THREADSAFE;NDEBUG</DefineConstants>
